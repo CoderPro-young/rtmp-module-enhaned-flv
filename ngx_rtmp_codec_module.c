@@ -10,6 +10,7 @@
 #include "ngx_rtmp_live_module.h"
 #include "ngx_rtmp_cmd_module.h"
 #include "ngx_rtmp_bitop.h"
+#include <string.h>
 
 
 #define NGX_RTMP_CODEC_META_OFF     0
@@ -30,6 +31,8 @@ static void ngx_rtmp_codec_parse_aac_header(ngx_rtmp_session_t *s,
        ngx_chain_t *in);
 static void ngx_rtmp_codec_parse_avc_header(ngx_rtmp_session_t *s,
        ngx_chain_t *in);
+static void ngx_rtmp_codec_parse_hevc_header(ngx_rtmp_session_t *s,
+        ngx_chain_t* in); 
 #if (NGX_DEBUG)
 static void ngx_rtmp_codec_dump_header(ngx_rtmp_session_t *s, const char *type,
        ngx_chain_t *in);
@@ -122,6 +125,8 @@ video_codecs[] = {
     "On2-VP6-Alpha",
     "ScreenVideo2",
     "H264",
+    "HEVC",
+    "AV1", 
 };
 
 
@@ -217,6 +222,9 @@ ngx_rtmp_codec_av(ngx_rtmp_session_t *s, ngx_rtmp_header_t *h,
     }
 
     fmt =  in->buf->pos[0];
+    if (fmt & 0x80) {
+        ctx->is_enhanced_flv = true; 
+    }
     if (h->type == NGX_RTMP_MSG_AUDIO) {
         ctx->audio_codec_id = (fmt & 0xf0) >> 4;
         ctx->audio_channels = (fmt & 0x01) + 1;
@@ -226,7 +234,14 @@ ngx_rtmp_codec_av(ngx_rtmp_session_t *s, ngx_rtmp_header_t *h,
             ctx->sample_rate = sample_rates[(fmt & 0x0c) >> 2];
         }
     } else {
-        ctx->video_codec_id = (fmt & 0x0f);
+        if (ctx->is_enhanced_flv) {
+            if (memcmp(&(in->buf->pos[1]), "cveh", 4) == 0) {
+                ctx->video_codec_id = NGX_RTMP_VIDEO_HEVC; 
+            }
+        } else {
+            ctx->video_codec_id = (fmt & 0x0f);
+        }
+        
     }
 
     /* save AVC/AAC header */
@@ -251,6 +266,9 @@ ngx_rtmp_codec_av(ngx_rtmp_session_t *s, ngx_rtmp_header_t *h,
         if (ctx->video_codec_id == NGX_RTMP_VIDEO_H264) {
             header = &ctx->avc_header;
             ngx_rtmp_codec_parse_avc_header(s, in);
+        } else if (ctx->video_codec_id == NGX_RTMP_VIDEO_HEVC) {
+            header = &ctx->avc_header;
+            ngx_rtmp_codec_parse_hevc_header(s, in);
         }
     }
 
@@ -530,6 +548,12 @@ ngx_rtmp_codec_parse_avc_header(ngx_rtmp_session_t *s, ngx_chain_t *in)
                    ctx->avc_profile, ctx->avc_compat, ctx->avc_level,
                    ctx->avc_nal_bytes, ctx->avc_ref_frames,
                    ctx->width, ctx->height);
+}
+
+
+static void
+ngx_rtmp_codec_parse_hevc_header(ngx_rtmp_session_t *s, ngx_chain_t *in) {
+    // TODO 
 }
 
 

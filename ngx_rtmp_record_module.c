@@ -1146,7 +1146,8 @@ ngx_rtmp_record_node_av(ngx_rtmp_session_t *s, ngx_rtmp_record_rec_ctx_t *rctx,
     }
 
     if (h->type == NGX_RTMP_MSG_VIDEO) {
-        if (codec_ctx && codec_ctx->video_codec_id == NGX_RTMP_VIDEO_H264 &&
+        if (codec_ctx && (codec_ctx->video_codec_id == NGX_RTMP_VIDEO_H264 
+        || codec_ctx->video_codec_id == NGX_RTMP_VIDEO_HEVC) &&
             !rctx->avc_header_sent)
         {
             ngx_log_debug1(NGX_LOG_DEBUG_RTMP, s->connection->log, 0,
