@@ -16,6 +16,7 @@
 
 #include "ngx_rtmp_amf.h"
 #include "ngx_rtmp_bandwidth.h"
+#include <stdbool.h>
 
 
 #if (NGX_WIN32)
@@ -609,7 +610,7 @@ static ngx_inline ngx_int_t
 ngx_rtmp_is_codec_header(ngx_chain_t *in)
 {
     if (ngx_rtmp_is_enhanced_flv(in)) {
-        return (in->buf->pos[0] & 0xf0) == 0; // low 4 bits 
+        return (in->buf->pos[0] & 0x0f) == 0; // low 4 bits 
     }
     return in->buf->pos + 1 < in->buf->last && in->buf->pos[1] == 0;
 }
